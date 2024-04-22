@@ -6,6 +6,11 @@ from app.qa.ad import AdProperties, Checks, ExpectedValues, QAChecker
 app = FastAPI()
 
 
+@app.get("/")
+def get_home():
+    return {"status": "ok", "Hello": "World!!!"}
+
+
 @app.post("/qa/ad")
 def qa_ad(
     campaign_data: dict[str, dict[str, dict[str, AdProperties]]],
