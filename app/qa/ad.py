@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from collections import defaultdict
@@ -37,6 +38,7 @@ class QAChecker:
 
     def run(self):
         failure_messages = defaultdict(list)
+        seen_ad_location = defaultdict(set)
         for campaign in self.campaigns:
             adsets = self.campaigns[campaign]
             for adset in adsets:
@@ -56,11 +58,21 @@ class QAChecker:
                                 "Incorrect Landing Page"
                             )
 
-                    if (
-                        campaign not in self.expected["campaigns"]
-                        or adset not in self.expected["campaigns"][campaign]
-                    ):
-                        failure_messages[error_path].append("Incorrect Ad Placement")
+                    if not self.is_expected_path(campaign, adset):
+                        failure_messages[error_path].append(
+                            "Ad in unexpected campaign and/or ad set"
+                        )
+
+                    seen_ad_location[campaign].add(adset)
+
+        differences = self.compute_differences(
+            self.expected["campaigns"], seen_ad_location
+        )
+        if differences:
+            for difference in differences:
+                failure_messages[difference].append(
+                    "Ad is missing from expected ad set and campaign"
+                )
 
         if len(failure_messages) > 0:
             return {"success": False, "failures": failure_messages}
@@ -74,8 +86,29 @@ class QAChecker:
         correct_ad_name = self.expected["ad_name"]
         return correct_ad_name == ad_name
 
+    def compute_differences(
+        self,
+        expected_structure: dict[str, set[str]],
+        actual_structure: dict[str, set[str]],
+    ) -> List[str]:
+        differences = []
+        for campaign in expected_structure:
+            for ad_set in expected_structure[campaign]:
+                if (
+                    campaign not in actual_structure
+                    or ad_set not in actual_structure[campaign]
+                ):
+                    differences.append(f"{campaign} > {ad_set}")
+        return differences
+
     def is_correct_landing_page(self, landing_page: str):
         return self.expected["landing_page"] == landing_page
+
+    def is_expected_path(self, campaign: str, ad_set: str):
+        campaigns = self.expected["campaigns"]
+        if campaign not in campaigns or ad_set not in campaigns[campaign]:
+            return False
+        return True
 
 
 if __name__ == "__main__":

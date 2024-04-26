@@ -1,6 +1,7 @@
 northeast-finn-mbp.pem
 README.Docker.md
 .vscode
+test_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
